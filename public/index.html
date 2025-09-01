@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Timeline App</title>
+  <link rel="stylesheet" href="timeline.css">
+  <!-- TimelineJS CDN -->
+  <link href="https://cdn.knightlab.com/libs/timeline3/latest/css/timeline.css" rel="stylesheet">
+  <link href="https://cdn.knightlab.com/libs/timeline3/latest/css/themes/timeline.css" rel="stylesheet">
+</head>
+<body>
+  <h1>Timeline</h1>
+  
+  <div id="timeline-embed"></div>
+  
+  <!-- Add Event Form -->
+  <div id="add-event-form">
+    <h2>Add New Event</h2>
+    <form id="eventForm">
+      <div class="form-group">
+        <label for="headline">Headline *</label>
+        <input type="text" id="headline" required>
+      </div>
+      
+      <div class="form-group">
+        <label for="text_content">Description *</label>
+        <textarea id="text_content" required></textarea>
+      </div>
+      
+      <div class="form-row">
+        <div class="form-group">
+          <label for="start_year">Year *</label>
+          <input type="number" id="start_year" required>
+        </div>
+        <div class="form-group">
+          <label for="start_month">Month</label>
+          <input type="number" id="start_month" min="1" max="12">
+        </div>
+        <div class="form-group">
+          <label for="start_day">Day</label>
+          <input type="number" id="start_day" min="1" max="31">
+        </div>
+      </div>
+      
+      <div class="form-group">
+        <label for="media_url">Media URL</label>
+        <input type="url" id="media_url">
+      </div>
+      
+      <div class="form-group">
+        <label for="media_caption">Media Caption</label>
+        <input type="text" id="media_caption">
+      </div>
+      
+      <div class="form-group">
+        <label for="group_name">Group</label>
+        <input type="text" id="group_name">
+      </div>
+      
+      <button type="submit">Add Event</button>
+    </form>
+    <div id="message"></div>
+  </div>
+  
+  <script src="https://cdn.knightlab.com/libs/timeline3/latest/js/timeline.js"></script>
+  <script src="timeline.js"></script>
+</body>
+</html>
