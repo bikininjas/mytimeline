@@ -4,11 +4,18 @@ on:
   push:
     branches: [ main, master ]
   workflow_dispatch:
+    inputs:
+      setup_domain:
+        description: 'Setup custom domain after deployment'
+        required: false
+        default: true
+        type: boolean
 
 env:
   PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
   REGION: europe-west9
   SERVICE_NAME: timeline-app
+  DOMAIN_NAME: timeline.bikininjas.fr
 
 jobs:
   deploy:
@@ -70,6 +77,7 @@ jobs:
           fi
           
       - name: Deploy to Cloud Run
+        id: deploy
         run: |
           gcloud run deploy $SERVICE_NAME \
             --image europe-west9-docker.pkg.dev/$PROJECT_ID/timeline-app/timeline-app:${{ github.sha }} \
@@ -80,3 +88,77 @@ jobs:
             --cpu 0.08 \
             --max-instances 1 \
             --set-env-vars SQLITE_URL="${{ secrets.SQLITECLOUD_TIMELINE_CONNECTION_STRING }}"
+            
+          # Get the service URL
+          SERVICE_URL=$(gcloud run services describe $SERVICE_NAME --region=$REGION --format="value(status.url)")
+          echo "service_url=$SERVICE_URL" >> $GITHUB_OUTPUT
+          echo "✅ Service deployed successfully at: $SERVICE_URL"
+
+  setup-domain:
+    name: 🌐 Setup Custom Domain
+    runs-on: ubuntu-latest
+    needs: deploy
+    if: ${{ (github.event_name == 'workflow_dispatch' && inputs.setup_domain == true) || github.event_name == 'push' }}
+    
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+        
+      - name: 🔐 Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCS_GH_SVC_ACCOUNT_JSON_KEY }}
+          
+      - name: 🏗️ Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+        with:
+          project_id: ${{ secrets.GCP_PROJECT_ID }}
+          
+      - name: 🔍 Check DNS and setup domain
+        run: |
+          chmod +x ./gcp-config/domain-manager.sh
+          
+          # Check DNS configuration
+          if ./gcp-config/domain-manager.sh verify-dns -d "$DOMAIN_NAME" -p "$PROJECT_ID"; then
+            echo "✅ DNS is properly configured"
+            
+            # Create/update domain mapping
+            ./gcp-config/domain-manager.sh create-mapping -d "$DOMAIN_NAME" -p "$PROJECT_ID" -r "$REGION" -s "$SERVICE_NAME"
+            
+            # Check status
+            ./gcp-config/domain-manager.sh check-status -d "$DOMAIN_NAME" -p "$PROJECT_ID" -r "$REGION"
+            
+            echo "domain_configured=true" >> $GITHUB_ENV
+          else
+            echo "⚠️ DNS not configured yet"
+            echo "domain_configured=false" >> $GITHUB_ENV
+          fi
+          
+      - name: 📊 Domain status summary
+        run: |
+          echo "## 🌐 Domain Configuration Status" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Item | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|------|--------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Domain | $DOMAIN_NAME |" >> $GITHUB_STEP_SUMMARY
+          echo "| DNS Ready | $domain_configured |" >> $GITHUB_STEP_SUMMARY
+          
+          if [ "$domain_configured" = "true" ]; then
+            echo "| Domain Mapping | ✅ Configured |" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "### 🎉 Success!" >> $GITHUB_STEP_SUMMARY
+            echo "Your Timeline App is available at: **https://$DOMAIN_NAME**" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "| Domain Mapping | ⏳ Waiting for DNS |" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "### 🔧 DNS Configuration Required" >> $GITHUB_STEP_SUMMARY
+            echo "Configure these DNS records in Pulseheberg:" >> $GITHUB_STEP_SUMMARY
+            echo "```" >> $GITHUB_STEP_SUMMARY
+            echo "Type: CNAME" >> $GITHUB_STEP_SUMMARY
+            echo "Host: timeline" >> $GITHUB_STEP_SUMMARY
+            echo "Target: ghs.googlehosted.com." >> $GITHUB_STEP_SUMMARY
+            echo "TTL: 300" >> $GITHUB_STEP_SUMMARY
+            echo "```" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "Then run the **Setup Custom Domain** workflow manually." >> $GITHUB_STEP_SUMMARY
+          fi
