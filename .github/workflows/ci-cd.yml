@@ -32,6 +32,14 @@ jobs:
       - name: Configure Docker for Artifact Registry
         run: gcloud auth configure-docker europe-west9-docker.pkg.dev
 
+      - name: Create Artifact Registry Repository
+        run: |
+          gcloud artifacts repositories create timeline-app \
+            --repository-format=docker \
+            --location=europe-west9 \
+            --description="Timeline App Docker Repository - Europe West 9 (Paris)" \
+            --quiet || echo "Repository already exists"
+
       - name: Build and Push Docker Image
         run: |
           docker build -t europe-west9-docker.pkg.dev/$PROJECT_ID/timeline-app/timeline-app:${{ github.sha }} .
