@@ -11,31 +11,27 @@ function getEventTypeColor(eventType) {
 // Load timeline data
 async function loadTimeline() {
   try {
-    console.log('Loading timeline data...');
     const response = await fetch('/api/data');
-    console.log('API response status:', response.status);
 
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`);
     }
 
     const data = await response.json();
-    console.log('Timeline data received:', data);
 
     // Check if we have events
     if (!data.events || data.events.length === 0) {
-      console.log('No events found in timeline data');
       showFallbackTimeline([]);
+      populateEventsDropdown([]); // Update dropdown with empty events
       return;
     }
 
-    console.log('Initializing TimelineJS with', data.events.length, 'events');
+    // Populate the events dropdown
+    populateEventsDropdown(data.events);
 
     // Try to initialize TimelineJS
     try {
       if (typeof TL !== 'undefined' && TL.Timeline) {
-        console.log('TimelineJS is available, initializing...');
-
         // Wait for DOM to be ready
         if (document.readyState === 'loading') {
           document.addEventListener('DOMContentLoaded', () => {
@@ -45,26 +41,24 @@ async function loadTimeline() {
           initializeTimeline(data);
         }
       } else {
-        console.error('TimelineJS not available');
         showFallbackTimeline(data.events || []);
       }
     } catch (timelineError) {
-      console.error('TimelineJS initialization error:', timelineError);
       showFallbackTimeline(data.events || []);
     }
 
   } catch (error) {
-    console.error('Error loading timeline:', error);
     showFallbackTimeline([]);
   }
 }
 
 // Fallback timeline using simple HTML
 function showFallbackTimeline(events) {
-  console.log('Showing fallback timeline with', events.length, 'events');
+  // Populate dropdown even in fallback mode
+  populateEventsDropdown(events);
 
   let html = '<div style="border: 1px solid #ccc; padding: 20px; margin: 20px 0; background: #f9f9f9; border-radius: 8px;">';
-  html += '<h3 style="margin-top: 0; color: #2563eb;">📅 Chronologie Simple de Secours</h3>';
+  html += '<h3 style="margin-top: 0; color: var(--text-primary);">📅 Chronologie Simple de Secours</h3>';
 
   if (events.length === 0) {
     html += '<p style="color: #64748b;">Aucun événement à afficher. Ajoutez des événements en utilisant le formulaire !</p>';
@@ -84,7 +78,7 @@ function showFallbackTimeline(events) {
       const emotionEmoji = emotionEmojis[emotion] || '😐';
 
       html += `
-        <div class="timeline-event-${eventType}" style="border-left: 4px solid ${getEventTypeColor(eventType)}; padding-left: 15px; background: white; padding: 15px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); position: relative;">
+        <div class="timeline-event-${eventType}" style="border-left: 4px solid ${getEventTypeColor(eventType)}; padding-left: 15px; background: var(--surface-color); padding: 15px; border-radius: 8px; box-shadow: var(--shadow-sm); position: relative;">
           <div class="edit-buttons">
             <button class="edit-button" onclick="editEvent(${event.id})" title="Modifier l'événement">
               ✏️
@@ -99,7 +93,7 @@ function showFallbackTimeline(events) {
           </div>
           <p style="margin: 0 0 10px 0; color: #64748b; font-size: 14px;">📅 ${date}</p>
           <p style="margin: 0; color: #374151; line-height: 1.5;">${event.text.text}</p>
-          ${event.media ? `<p style="margin: 10px 0 0 0; font-size: 14px;"><a href="${event.media.url}" target="_blank" style="color: #2563eb;">🔗 Voir le Média</a></p>` : ''}
+          ${event.media ? `<p style="margin: 10px 0 0 0; font-size: 14px;"><a href="${event.media.url}" target="_blank" style="color: var(--primary-color);">🔗 Voir le Média</a></p>` : ''}
         </div>
       `;
     });
@@ -115,7 +109,6 @@ function initializeTimeline(data) {
   try {
     // Ensure data has proper structure for TimelineJS
     if (!data.events || !Array.isArray(data.events)) {
-      console.error('Invalid data structure for TimelineJS');
       showFallbackTimeline([]);
       return;
     }
@@ -129,15 +122,18 @@ function initializeTimeline(data) {
       }))
     };
 
-    console.log('Transformed data for TimelineJS:', transformedData);
-
     if (window.timeline) {
-      console.log('Updating existing timeline');
       window.timeline.updateData(transformedData);
+      
+      // Add edit buttons after update
+      setTimeout(() => {
+        addTimelineStyling();
+        addEditButtonsToSlides();
+      }, 1000);
+      setTimeout(() => addEditButtonsToSlides(), 2000);
     } else {
-      console.log('Creating new timeline');
       window.timeline = new TL.Timeline('timeline-embed', transformedData, {
-        debug: true,
+        debug: false,
         start_at_end: false,
         default_bg_color: '#f8fafc',
         scale_factor: 1,
@@ -159,23 +155,24 @@ function initializeTimeline(data) {
       // Add custom styling after TimelineJS loads
       setTimeout(() => {
         addTimelineStyling();
+        addEditButtonsToSlides();
       }, 1000);
+      
+      // Add additional attempts to ensure edit buttons are added
+      setTimeout(() => addEditButtonsToSlides(), 2000);
+      setTimeout(() => addEditButtonsToSlides(), 3000);
     }
   } catch (error) {
-    console.error('Error in initializeTimeline:', error);
     throw error;
   }
 }
 
 // Add custom styling to TimelineJS elements
 function addTimelineStyling() {
-  console.log('Adding custom timeline styling');
-
   // Apply styling multiple times to ensure it sticks
   const applyStylesWithDelay = (delay) => {
     setTimeout(() => {
       try {
-        console.log(`Applying styles with ${delay}ms delay`);
         
         // Target the CORRECT TimelineJS marker classes from documentation
         const correctMarkerSelectors = [
@@ -186,20 +183,15 @@ function addTimelineStyling() {
           '.tl-timenav .tl-timemarker-content-container'
         ];
         
-        console.log('Searching for CORRECT TimelineJS markers...');
-        
         let correctMarkers = [];
         correctMarkerSelectors.forEach(selector => {
           const markers = document.querySelectorAll(selector);
-          console.log(`Found ${markers.length} elements with selector: ${selector}`);
           markers.forEach(marker => {
             if (!correctMarkers.includes(marker)) {
               correctMarkers.push(marker);
             }
           });
         });
-        
-        console.log('Found', correctMarkers.length, 'CORRECT timeline markers');
 
         // Apply colors to correct markers
         correctMarkers.forEach((marker, index) => {
@@ -220,8 +212,6 @@ function addTimelineStyling() {
           if (eventData && eventData.event_type) {
             const eventType = eventData.event_type;
             const color = getEventTypeColor(eventType);
-            
-            console.log(`Styling CORRECT marker ${index} with type ${eventType} and color ${color}`);
             
             // Apply ultra-aggressive styling for the correct marker elements
             const markerStyles = {
@@ -267,8 +257,6 @@ function addTimelineStyling() {
             }
           });
         });
-        
-        console.log('Found', allMarkers.length, 'timeline markers');
 
         // Apply colors to each marker based on event order
         allMarkers.forEach((marker, index) => {
@@ -289,8 +277,6 @@ function addTimelineStyling() {
           if (eventData && eventData.event_type) {
             const eventType = eventData.event_type;
             const color = getEventTypeColor(eventType);
-            
-            console.log(`Styling marker ${index} with type ${eventType} and color ${color}`);
             
             // Apply ultra-aggressive styling with multiple methods
             const styles = {
@@ -351,7 +337,6 @@ function addTimelineStyling() {
                   marker.style.setProperty('box-shadow', `0 0 15px ${color}80`, 'important');
                   marker.style.setProperty('transform', 'scale(1.4)', 'important');
                   marker.classList.add(`marker-${event.event_type}`);
-                  console.log(`Alternative styling applied to marker ${index} with color ${color}`);
                 }
               });
             }
@@ -360,7 +345,6 @@ function addTimelineStyling() {
 
         // Style slide backgrounds and add classes with stronger colors
         const slides = document.querySelectorAll('.tl-slide');
-        console.log('Found', slides.length, 'timeline slides');
 
         slides.forEach((slide, index) => {
           const eventData = window.timeline?.data?.events[index];
@@ -455,33 +439,36 @@ function addTimelineStyling() {
               position: absolute;
               top: 10px;
               right: 10px;
-              background: rgba(255, 255, 255, 0.9);
-              border: 1px solid #e2e8f0;
+              background: var(--surface-color);
+              border: 2px solid #e2e8f0;
               border-radius: 50%;
-              width: 32px;
-              height: 32px;
+              width: 36px;
+              height: 36px;
               display: flex;
               align-items: center;
               justify-content: center;
               cursor: pointer;
-              font-size: 14px;
-              z-index: 10;
+              font-size: 16px;
+              z-index: 1000;
               transition: all 0.2s ease;
-              opacity: 0.7;
+              box-shadow: var(--shadow);
+              opacity: 0.8;
             `;
             
             editButton.addEventListener('mouseenter', () => {
               editButton.style.background = 'white';
-              editButton.style.transform = 'scale(1.1)';
+              editButton.style.transform = 'scale(1.15)';
               editButton.style.opacity = '1';
-              editButton.style.boxShadow = '0 2px 8px rgba(0,0,0,0.15)';
+              editButton.style.boxShadow = 'var(--shadow-lg)';
+              editButton.style.borderColor = 'var(--primary-color)';
             });
             
             editButton.addEventListener('mouseleave', () => {
-              editButton.style.background = 'rgba(255, 255, 255, 0.9)';
+              editButton.style.background = 'var(--surface-color)';
               editButton.style.transform = 'scale(1)';
-              editButton.style.opacity = '0.7';
-              editButton.style.boxShadow = 'none';
+              editButton.style.opacity = '0.8';
+              editButton.style.boxShadow = 'var(--shadow-sm)';
+              editButton.style.borderColor = 'var(--border-color)';
             });
             
             editButton.addEventListener('click', (e) => {
@@ -494,6 +481,41 @@ function addTimelineStyling() {
             slide.appendChild(editButton);
           }
         });
+
+        // Also add edit buttons with multiple timing attempts
+        setTimeout(() => {
+          const newSlides = document.querySelectorAll('.tl-slide');
+          newSlides.forEach((slide, index) => {
+            const eventData = window.timeline?.data?.events[index];
+            if (eventData && eventData.id && !slide.querySelector('.timeline-edit-button')) {
+              const editButton = document.createElement('button');
+              editButton.className = 'timeline-edit-button';
+              editButton.innerHTML = '✏️';
+              editButton.title = 'Modifier cet événement';
+              editButton.onclick = (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                editEvent(eventData.id);
+              };
+              editButton.style.cssText = `
+                position: absolute !important;
+                top: 10px !important;
+                right: 10px !important;
+                background: var(--surface-color) !important;
+                border: 2px solid var(--primary-color) !important;
+                border-radius: 50% !important;
+                width: 36px !important;
+                height: 36px !important;
+                cursor: pointer !important;
+                font-size: 16px !important;
+                z-index: 9999 !important;
+                box-shadow: 0 2px 8px rgba(0,0,0,0.2) !important;
+              `;
+              slide.style.position = 'relative';
+              slide.appendChild(editButton);
+            }
+          });
+        }, 1500);
 
         // Inject custom CSS directly into the page for maximum override power
         const customCSS = `
@@ -572,12 +594,9 @@ function addTimelineStyling() {
           existingOverride.remove();
         }
         document.head.insertAdjacentHTML('beforeend', customCSS);
-        console.log('Injected custom CSS override for timeline colors');
-
-        console.log('Custom timeline styling applied successfully');
 
       } catch (error) {
-        console.error('Error applying timeline styling:', error);
+        // Ignore styling errors
       }
     }, delay);
   };
@@ -589,9 +608,399 @@ function addTimelineStyling() {
   applyStylesWithDelay(2000);
 }
 
+// Function to add edit buttons to TimelineJS slides
+function addEditButtonsToSlides() {
+  const slides = document.querySelectorAll('.tl-slide');
+
+  // Also try alternative selectors
+  const alternativeSlides = document.querySelectorAll('#timeline-embed .tl-slide, .tl-storyslider .tl-slide');
+
+  const slidesToProcess = slides.length > 0 ? slides : alternativeSlides;
+  
+  slidesToProcess.forEach((slide, index) => {
+    const eventData = window.timeline?.data?.events[index];
+    
+    if (eventData && eventData.id && !slide.querySelector('.timeline-edit-button')) {
+      
+      const editButton = document.createElement('button');
+      editButton.className = 'timeline-edit-button';
+      editButton.innerHTML = '✏️';
+      editButton.title = 'Modifier cet événement';
+      editButton.setAttribute('data-event-id', eventData.id);
+      
+      editButton.style.cssText = `
+        position: absolute !important;
+        top: 15px !important;
+        right: 15px !important;
+        background: rgba(255, 255, 255, 0.95) !important;
+        border: 2px solid #3b82f6 !important;
+        border-radius: 50% !important;
+        width: 40px !important;
+        height: 40px !important;
+        cursor: pointer !important;
+        font-size: 18px !important;
+        z-index: 9999 !important;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.25) !important;
+        transition: all 0.2s ease !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+      `;
+      
+      editButton.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        editEvent(eventData.id);
+      });
+      
+      editButton.addEventListener('mouseenter', (e) => {
+        e.target.style.transform = 'scale(1.1)';
+        e.target.style.borderColor = '#1d4ed8';
+        e.target.style.background = 'white';
+      });
+      
+      editButton.addEventListener('mouseleave', (e) => {
+        e.target.style.transform = 'scale(1)';
+        e.target.style.borderColor = '#3b82f6';
+        e.target.style.background = 'rgba(255, 255, 255, 0.95)';
+      });
+      
+      slide.style.position = 'relative';
+      slide.appendChild(editButton);
+    }
+  });
+}
+
 // Load timeline on page load
-console.log('Page loaded, calling loadTimeline');
 loadTimeline();
+
+// Events dropdown functionality
+let allEvents = [];
+
+// Function to populate events dropdown
+function populateEventsDropdown(events) {
+  allEvents = events || [];
+  const dropdown = document.getElementById('eventSelect');
+  
+  // Clear existing options except the first one
+  dropdown.innerHTML = '<option value="">-- Choisir un événement à modifier --</option>';
+  
+  if (allEvents.length === 0) {
+    const option = document.createElement('option');
+    option.value = '';
+    option.textContent = 'Aucun événement disponible';
+    option.disabled = true;
+    dropdown.appendChild(option);
+    return;
+  }
+  
+  // Sort events by date (most recent first)
+  const sortedEvents = [...allEvents].sort((a, b) => {
+    const dateA = new Date(a.original_data?.start_year || 0, (a.original_data?.start_month || 1) - 1, a.original_data?.start_day || 1);
+    const dateB = new Date(b.original_data?.start_year || 0, (b.original_data?.start_month || 1) - 1, b.original_data?.start_day || 1);
+    return dateB - dateA;
+  });
+  
+  sortedEvents.forEach(event => {
+    if (event.id && event.text?.headline) {
+      const option = document.createElement('option');
+      option.value = event.id;
+      
+      // Create a descriptive option text without emojis
+      const date = formatEventDate(event);
+      const emotionName = (event.original_data?.emotion || 'neutral').replace('_', ' ');
+      const eventType = event.original_data?.event_type || 'neutral';
+      
+      option.textContent = `${event.text.headline} (${date}) - ${eventType} - ${emotionName}`;
+      option.setAttribute('data-event-id', event.id);
+      
+      dropdown.appendChild(option);
+    }
+  });
+}
+
+// Helper function to format event date
+function formatEventDate(event) {
+  const year = event.original_data?.start_year || event.start_date?.year;
+  const month = event.original_data?.start_month || event.start_date?.month;
+  const day = event.original_data?.start_day || event.start_date?.day;
+  
+  if (!year) return 'Date inconnue';
+  
+  let dateStr = year.toString();
+  if (month) {
+    dateStr += `-${String(month).padStart(2, '0')}`;
+    if (day) {
+      dateStr += `-${String(day).padStart(2, '0')}`;
+    }
+  }
+  
+  return dateStr;
+}
+
+// Helper function to get emotion emoji
+function getEmotionEmoji(emotion) {
+  const emotionEmojis = {
+    joy: '😄', pride: '🌟', gratitude: '🙏', anger: '😠', shame: '😳',
+    self_deprecation: '😔', self_esteem: '💪', sadness: '😢', anxiety: '😰', neutral: '😐'
+  };
+  return emotionEmojis[emotion] || '😐';
+}
+
+// Helper function to get event type indicator
+function getEventTypeIndicator(eventType) {
+  const indicators = {
+    good: '✅',
+    bad: '❌',
+    neutral: '⚪'
+  };
+  return indicators[eventType] || '⚪';
+}
+
+// Function to show event preview
+function showEventPreview(event) {
+  const previewContainer = document.getElementById('eventPreview');
+  const previewContent = document.querySelector('.event-preview-content');
+  
+  if (!event) {
+    previewContainer.style.display = 'none';
+    return;
+  }
+  
+  const eventData = event.original_data || {};
+  const date = formatEventDate(event);
+  const emotion = getEmotionEmoji(eventData.emotion || 'neutral');
+  const emotionName = (eventData.emotion || 'neutral').replace('_', ' ');
+  const eventType = eventData.event_type || 'neutral';
+  
+  const previewHtml = `
+    <div class="event-preview-item event-${eventType}">
+      <h4 class="event-preview-title">${event.text?.headline || 'Sans titre'}</h4>
+      <div class="event-preview-date">
+        <span>📅 ${date}</span>
+      </div>
+      <div class="event-preview-description">
+        ${event.text?.text || 'Aucune description'}
+      </div>
+      <div class="event-preview-meta">
+        <div class="event-preview-meta-item">
+          <span>Type:</span>
+          <span>${getEventTypeIndicator(eventType)} ${eventType}</span>
+        </div>
+        <div class="event-preview-meta-item">
+          <span>Émotion:</span>
+          <span>${emotion} ${emotionName}</span>
+        </div>
+        ${eventData.group_name ? `
+          <div class="event-preview-meta-item">
+            <span>Catégorie:</span>
+            <span>${eventData.group_name}</span>
+          </div>
+        ` : ''}
+        ${eventData.media_url ? `
+          <div class="event-preview-meta-item">
+            <span>📎 Média</span>
+          </div>
+        ` : ''}
+      </div>
+    </div>
+  `;
+  
+  previewContent.innerHTML = previewHtml;
+  previewContainer.style.display = 'block';
+}
+
+// Function to handle dropdown selection
+function handleEventSelection() {
+  const dropdown = document.getElementById('eventSelect');
+  const editButton = document.getElementById('editSelectedEvent');
+  const deleteButton = document.getElementById('deleteSelectedEvent');
+  
+  const selectedEventId = dropdown.value;
+  
+  if (selectedEventId) {
+    // Enable buttons
+    editButton.disabled = false;
+    deleteButton.disabled = false;
+    
+    // Find and show preview
+    const selectedEvent = allEvents.find(event => event.id == selectedEventId);
+    showEventPreview(selectedEvent);
+  } else {
+    // Disable buttons
+    editButton.disabled = true;
+    deleteButton.disabled = true;
+    
+    // Hide preview
+    showEventPreview(null);
+  }
+}
+
+// Function to handle edit selected event
+function editSelectedEvent() {
+  const dropdown = document.getElementById('eventSelect');
+  const selectedEventId = dropdown.value;
+  
+  if (selectedEventId) {
+    editEvent(parseInt(selectedEventId));
+  }
+}
+
+// Function to handle delete selected event
+async function deleteSelectedEvent() {
+  const dropdown = document.getElementById('eventSelect');
+  const selectedEventId = dropdown.value;
+  
+  if (!selectedEventId) return;
+  
+  const selectedEvent = allEvents.find(event => event.id == selectedEventId);
+  const eventTitle = selectedEvent?.text?.headline || 'cet événement';
+  
+  if (!confirm(`Êtes-vous sûr de vouloir supprimer "${eventTitle}" ? Cette action est irréversible.`)) {
+    return;
+  }
+  
+  try {
+    const response = await fetch(`/api/events/${selectedEventId}`, {
+      method: 'DELETE'
+    });
+    
+    const result = await response.json();
+    
+    if (response.ok) {
+      alert('✅ ' + result.message);
+      
+      // Reset dropdown selection
+      dropdown.value = '';
+      handleEventSelection();
+      
+      // Reload timeline to reflect changes
+      setTimeout(() => loadTimeline(), 500);
+    } else {
+      alert('❌ ' + result.error);
+    }
+  } catch (error) {
+    alert('❌ Erreur lors de la suppression de l\'événement');
+  }
+}
+
+// Event listeners for dropdown functionality
+document.addEventListener('DOMContentLoaded', () => {
+  const dropdown = document.getElementById('eventSelect');
+  const editButton = document.getElementById('editSelectedEvent');
+  const deleteButton = document.getElementById('deleteSelectedEvent');
+  
+  if (dropdown) {
+    dropdown.addEventListener('change', handleEventSelection);
+  }
+  
+  if (editButton) {
+    editButton.addEventListener('click', editSelectedEvent);
+  }
+  
+  if (deleteButton) {
+    deleteButton.addEventListener('click', deleteSelectedEvent);
+  }
+});
+
+// Update loadTimeline function to also populate dropdown
+// (This will be handled in the existing loadTimeline function)
+
+// Add MutationObserver to detect when TimelineJS slides are rendered
+function observeTimelineSlides() {
+  const timelineContainer = document.getElementById('timeline-embed');
+  if (!timelineContainer) return;
+
+  const observer = new MutationObserver((mutations) => {
+    mutations.forEach((mutation) => {
+      if (mutation.type === 'childList') {
+        // Check if TimelineJS slides were added
+        const slides = document.querySelectorAll('.tl-slide');
+        if (slides.length > 0) {
+          setTimeout(() => addEditButtonsToTimelineJS(), 500);
+          setTimeout(() => addEditButtonsToTimelineJS(), 1500);
+          setTimeout(() => addEditButtonsToTimelineJS(), 3000);
+        }
+      }
+    });
+  });
+
+  observer.observe(timelineContainer, {
+    childList: true,
+    subtree: true
+  });
+}
+
+// Function specifically for adding edit buttons to TimelineJS slides
+function addEditButtonsToTimelineJS() {
+  const slides = document.querySelectorAll('.tl-slide');
+
+  slides.forEach((slide, index) => {
+    // Skip if edit button already exists
+    if (slide.querySelector('.timeline-edit-button')) {
+      return;
+    }
+
+    const eventData = window.timeline?.data?.events[index];
+    if (!eventData || !eventData.id) {
+      return;
+    }
+    
+    const editButton = document.createElement('button');
+    editButton.className = 'timeline-edit-button';
+    editButton.innerHTML = '✏️';
+    editButton.title = 'Modifier cet événement';
+    editButton.setAttribute('data-event-id', eventData.id);
+    
+    editButton.style.cssText = `
+      position: absolute !important;
+      top: 15px !important;
+      right: 15px !important;
+      background: rgba(255, 255, 255, 0.95) !important;
+      border: 2px solid #3b82f6 !important;
+      border-radius: 50% !important;
+      width: 40px !important;
+      height: 40px !important;
+      cursor: pointer !important;
+      font-size: 18px !important;
+      z-index: 9999 !important;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.25) !important;
+      transition: all 0.2s ease !important;
+      display: flex !important;
+      align-items: center !important;
+      justify-content: center !important;
+      opacity: 0.8 !important;
+    `;
+    
+    editButton.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      editEvent(eventData.id);
+    });
+    
+    editButton.addEventListener('mouseenter', (e) => {
+      e.target.style.transform = 'scale(1.1)';
+      e.target.style.borderColor = '#1d4ed8';
+      e.target.style.background = 'white';
+      e.target.style.opacity = '1';
+    });
+    
+    editButton.addEventListener('mouseleave', (e) => {
+      e.target.style.transform = 'scale(1)';
+      e.target.style.borderColor = '#3b82f6';
+      e.target.style.background = 'rgba(255, 255, 255, 0.95)';
+      e.target.style.opacity = '0.8';
+    });
+    
+    // Find the content container to position the button correctly
+    const contentContainer = slide.querySelector('.tl-slide-content-container') || slide;
+    contentContainer.style.position = 'relative';
+    contentContainer.appendChild(editButton);
+  });
+}
+
+// Start observing for TimelineJS slides
+observeTimelineSlides();
 
 // Handle form submission
 document.getElementById('eventForm').addEventListener('submit', async (e) => {
@@ -609,8 +1018,6 @@ document.getElementById('eventForm').addEventListener('submit', async (e) => {
     start_year: parseInt(document.getElementById('start_year').value),
     start_month: document.getElementById('start_month').value ? parseInt(document.getElementById('start_month').value) : null,
     start_day: document.getElementById('start_day').value ? parseInt(document.getElementById('start_day').value) : null,
-    media_url: document.getElementById('media_url').value || null,
-    media_caption: document.getElementById('media_caption').value || null,
     group_name: document.getElementById('group_name').value || null,
     event_type: document.getElementById('event_type').value || 'neutral',
     emotion: document.getElementById('emotion').value || 'neutral'
@@ -631,13 +1038,12 @@ document.getElementById('eventForm').addEventListener('submit', async (e) => {
     if (response.ok) {
       messageDiv.innerHTML = `<div class="message success">✅ ${result.message}</div>`;
       document.getElementById('eventForm').reset();
-      // Reload timeline to show new event
+      // Reload timeline to show new event and refresh dropdown
       setTimeout(() => loadTimeline(), 500);
     } else {
       messageDiv.innerHTML = `<div class="message error">❌ ${result.error}</div>`;
     }
   } catch (error) {
-    console.error('Error adding event:', error);
     document.getElementById('message').innerHTML = '<div class="message error">❌ Erreur lors de l\'ajout de l\'événement. Veuillez réessayer.</div>';
   } finally {
     // Remove loading state
@@ -688,7 +1094,6 @@ async function fetchEventData(eventId) {
       alert('Erreur lors du chargement des données de l\'événement');
     }
   } catch (error) {
-    console.error('Error fetching event data:', error);
     alert('Erreur lors du chargement des données de l\'événement');
   }
 }
@@ -741,13 +1146,12 @@ async function deleteEvent() {
     if (response.ok) {
       alert('✅ ' + result.message);
       closeEditModal();
-      // Reload timeline to reflect changes
+      // Reload timeline to reflect changes and refresh dropdown
       setTimeout(() => loadTimeline(), 500);
     } else {
       alert('❌ ' + result.error);
     }
   } catch (error) {
-    console.error('Error deleting event:', error);
     alert('❌ Erreur lors de la suppression de l\'événement');
   }
 }
@@ -791,13 +1195,12 @@ document.getElementById('editEventForm').addEventListener('submit', async (e) =>
     if (response.ok) {
       alert('✅ ' + result.message);
       closeEditModal();
-      // Reload timeline to reflect changes
+      // Reload timeline to reflect changes and refresh dropdown
       setTimeout(() => loadTimeline(), 500);
     } else {
       alert('❌ ' + result.error);
     }
   } catch (error) {
-    console.error('Error updating event:', error);
     alert('❌ Erreur lors de la mise à jour de l\'événement');
   } finally {
     // Remove loading state

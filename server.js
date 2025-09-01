@@ -27,7 +27,7 @@ async function ensureTable() {
       emotion TEXT DEFAULT 'neutral'
     )`);
   } catch (error) {
-    console.log('Table creation error (may already exist):', error.message);
+    // Table might already exist, ignore error
   } finally {
     db.close();
   }
@@ -89,7 +89,6 @@ app.get('/api/data', async (req, res) => {
     };
     res.json(timelineData);
   } catch (err) {
-    console.error('Database error:', err);
     res.status(500).json({ error: err.message });
   } finally {
     db?.close();
@@ -121,7 +120,6 @@ app.post('/api/events', express.json(), async (req, res) => {
     await db.sql(sql);
     res.json({ success: true, message: 'Événement ajouté avec succès' });
   } catch (err) {
-    console.error('Database error:', err);
     res.status(500).json({ error: err.message });
   } finally {
     db?.close();
@@ -158,7 +156,6 @@ app.put('/api/events/:id', express.json(), async (req, res) => {
     await db.sql(sql);
     res.json({ success: true, message: 'Événement mis à jour avec succès' });
   } catch (err) {
-    console.error('Database error:', err);
     res.status(500).json({ error: err.message });
   } finally {
     db?.close();
@@ -177,7 +174,6 @@ app.delete('/api/events/:id', async (req, res) => {
     await db.sql(sql);
     res.json({ success: true, message: 'Événement supprimé avec succès' });
   } catch (err) {
-    console.error('Database error:', err);
     res.status(500).json({ error: err.message });
   } finally {
     db?.close();
@@ -199,7 +195,6 @@ app.get('/api/events/:id', async (req, res) => {
     
     res.json(result[0]);
   } catch (err) {
-    console.error('Database error:', err);
     res.status(500).json({ error: err.message });
   } finally {
     db?.close();
@@ -207,5 +202,5 @@ app.get('/api/events/:id', async (req, res) => {
 });
 
 app.listen(PORT, () => {
-  console.log(`Server running on http://localhost:${PORT}`);
+  // Server started
 });

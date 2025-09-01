@@ -24,6 +24,45 @@
       </div>
     </section>
 
+    <!-- Events Management Section -->
+    <section class="events-management-section">
+      <div class="events-management-container">
+        <div class="events-management-header">
+          <h2 class="events-management-title">Gérer les Événements</h2>
+          <p class="events-management-description">Sélectionnez un événement dans la liste pour le modifier ou le supprimer</p>
+        </div>
+        
+        <div class="events-dropdown-container">
+          <div class="form-group">
+            <label for="eventSelect" class="form-label">Sélectionner un Événement</label>
+            <select id="eventSelect" class="form-input events-dropdown">
+              <option value="">-- Choisir un événement à modifier --</option>
+            </select>
+          </div>
+          
+          <div class="events-actions">
+            <button id="editSelectedEvent" class="action-button edit-button" disabled>
+              <span class="button-icon">✏️</span>
+              <span class="button-text">Modifier</span>
+            </button>
+            <button id="deleteSelectedEvent" class="action-button delete-button" disabled>
+              <span class="button-icon">🗑️</span>
+              <span class="button-text">Supprimer</span>
+            </button>
+          </div>
+        </div>
+        
+        <div id="eventPreview" class="event-preview" style="display: none;">
+          <div class="event-preview-header">
+            <h3>Aperçu de l'Événement</h3>
+          </div>
+          <div class="event-preview-content">
+            <!-- Event details will be populated here -->
+          </div>
+        </div>
+      </div>
+    </section>
+
     <aside class="event-form-section">
       <div class="form-card">
         <div class="form-header">
