@@ -1,68 +1,103 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="fr">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Timeline App</title>
+  <title>Chronologie Interactive</title>
   <link rel="stylesheet" href="timeline.css">
   <!-- TimelineJS CDN -->
   <link href="https://cdn.knightlab.com/libs/timeline3/latest/css/timeline.css" rel="stylesheet">
   <link href="https://cdn.knightlab.com/libs/timeline3/latest/css/themes/timeline.css" rel="stylesheet">
 </head>
 <body>
-  <h1>Timeline</h1>
-  
-  <div id="timeline-embed"></div>
-  
-  <!-- Add Event Form -->
-  <div id="add-event-form">
-    <h2>Add New Event</h2>
-    <form id="eventForm">
-      <div class="form-group">
-        <label for="headline">Headline *</label>
-        <input type="text" id="headline" required>
+  <header class="app-header">
+    <div class="header-content">
+      <h1 class="app-title">Chronologie Interactive</h1>
+      <p class="app-subtitle">Explorez les événements historiques et ajoutez les vôtres</p>
+    </div>
+  </header>
+
+  <main class="main-content">
+    <section class="timeline-section">
+      <div class="timeline-container">
+        <div id="timeline-embed" class="timeline-embed"></div>
       </div>
-      
-      <div class="form-group">
-        <label for="text_content">Description *</label>
-        <textarea id="text_content" required></textarea>
-      </div>
-      
-      <div class="form-row">
-        <div class="form-group">
-          <label for="start_year">Year *</label>
-          <input type="number" id="start_year" required>
+    </section>
+
+    <aside class="event-form-section">
+      <div class="form-card">
+        <div class="form-header">
+          <h2 class="form-title">Ajouter un Nouvel Événement</h2>
+          <p class="form-description">Contribuez à la chronologie en ajoutant des événements historiques</p>
         </div>
-        <div class="form-group">
-          <label for="start_month">Month</label>
-          <input type="number" id="start_month" min="1" max="12">
-        </div>
-        <div class="form-group">
-          <label for="start_day">Day</label>
-          <input type="number" id="start_day" min="1" max="31">
-        </div>
+
+        <form id="eventForm" class="event-form">
+          <div class="form-group">
+            <label for="headline" class="form-label">Titre de l'Événement *</label>
+            <input type="text" id="headline" class="form-input" placeholder="Entrez le titre de l'événement" required>
+          </div>
+
+          <div class="form-group">
+            <label for="text_content" class="form-label">Description *</label>
+            <textarea id="text_content" class="form-textarea" placeholder="Décrivez l'événement" required></textarea>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label for="start_year" class="form-label">Année *</label>
+              <input type="number" id="start_year" class="form-input" placeholder="2024" required>
+            </div>
+            <div class="form-group">
+              <label for="start_month" class="form-label">Mois</label>
+              <input type="number" id="start_month" class="form-input" placeholder="1" min="1" max="12">
+            </div>
+            <div class="form-group">
+              <label for="start_day" class="form-label">Jour</label>
+              <input type="number" id="start_day" class="form-input" placeholder="1" min="1" max="31">
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="group_name" class="form-label">Catégorie</label>
+            <input type="text" id="group_name" class="form-input" placeholder="ex: Carrière, Personnel, Santé">
+          </div>
+
+          <div class="form-group">
+            <label for="event_type" class="form-label">Type d'Événement *</label>
+            <select id="event_type" class="form-input" required>
+              <option value="neutral">😐 Neutre</option>
+              <option value="good">😊 Positif</option>
+              <option value="bad">😢 Négatif</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label for="emotion" class="form-label">Émotion *</label>
+            <select id="emotion" class="form-input" required>
+              <option value="neutral">😐 Neutre</option>
+              <option value="joy">😄 Joie</option>
+              <option value="pride">🌟 Fierté</option>
+              <option value="gratitude">🙏 Gratitude</option>
+              <option value="anger">😠 Colère</option>
+              <option value="shame">😳 Honte</option>
+              <option value="self_deprecation">😔 Autodénigrement</option>
+              <option value="self_esteem">💪 Estime de soi</option>
+              <option value="sadness">😢 Tristesse</option>
+              <option value="anxiety">😰 Anxiété</option>
+            </select>
+          </div>
+
+          <button type="submit" class="submit-button">
+            <span class="button-text">Ajouter l'Événement</span>
+            <span class="button-icon">📅</span>
+          </button>
+        </form>
+
+        <div id="message" class="message-area"></div>
       </div>
-      
-      <div class="form-group">
-        <label for="media_url">Media URL</label>
-        <input type="url" id="media_url">
-      </div>
-      
-      <div class="form-group">
-        <label for="media_caption">Media Caption</label>
-        <input type="text" id="media_caption">
-      </div>
-      
-      <div class="form-group">
-        <label for="group_name">Group</label>
-        <input type="text" id="group_name">
-      </div>
-      
-      <button type="submit">Add Event</button>
-    </form>
-    <div id="message"></div>
-  </div>
-  
+    </aside>
+  </main>
+
   <script src="https://cdn.knightlab.com/libs/timeline3/latest/js/timeline.js"></script>
   <script src="timeline.js"></script>
 </body>

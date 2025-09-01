@@ -1,9 +1,26 @@
 {
   "name": "timeline-app",
-  "version": "1.0.0",
+  "version": "2.0.0",
+  "description": "Interactive French-localized timeline application with color-coded events and real-time updates",
   "main": "server.js",
   "scripts": {
     "start": "node server.js"
+  },
+  "keywords": [
+    "timeline",
+    "timelinejs",
+    "french",
+    "events",
+    "history",
+    "visualization",
+    "color-coded",
+    "interactive"
+  ],
+  "author": "bikininjas",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/bikininjas/mytimeline.git"
   },
   "dependencies": {
     "@sqlitecloud/drivers": "^1.0.507",
