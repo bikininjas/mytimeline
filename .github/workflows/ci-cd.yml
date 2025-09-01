@@ -34,23 +34,40 @@ jobs:
 
       - name: Create Artifact Registry Repository
         run: |
-          gcloud artifacts repositories create timeline-app \
-            --repository-format=docker \
-            --location=europe-west9 \
-            --description="Timeline App Docker Repository - Europe West 9 (Paris)" \
-            --quiet || echo "Repository already exists"
+          echo "Checking if repository exists..."
+          if gcloud artifacts repositories describe timeline-app --location=europe-west9 --quiet 2>/dev/null; then
+            echo "Repository already exists"
+          else
+            echo "Creating repository..."
+            gcloud artifacts repositories create timeline-app \
+              --repository-format=docker \
+              --location=europe-west9 \
+              --description="Timeline App Docker Repository - Europe West 9 (Paris)"
+          fi
 
       - name: Verify Repository and Build/Push Docker Image
         run: |
           # Wait for repository to be ready
           echo "Waiting for repository to be available..."
-          sleep 10
+          sleep 5
           
-          # Verify repository exists
-          gcloud artifacts repositories describe timeline-app --location=europe-west9
+          # List all repositories to debug
+          echo "Available repositories in europe-west9:"
+          gcloud artifacts repositories list --location=europe-west9
+          
+          # Try to describe the repository
+          echo "Attempting to describe timeline-app repository:"
+          gcloud artifacts repositories describe timeline-app --location=europe-west9 || {
+            echo "Repository not found, listing all repositories:"
+            gcloud artifacts repositories list --location=europe-west9
+            exit 1
+          }
           
           # Build and push image
+          echo "Building Docker image..."
           docker build -t europe-west9-docker.pkg.dev/$PROJECT_ID/timeline-app/timeline-app:${{ github.sha }} .
+          
+          echo "Pushing Docker image..."
           docker push europe-west9-docker.pkg.dev/$PROJECT_ID/timeline-app/timeline-app:${{ github.sha }}
           
       - name: Deploy to Cloud Run
