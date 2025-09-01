@@ -84,7 +84,12 @@ function showFallbackTimeline(events) {
       const emotionEmoji = emotionEmojis[emotion] || '😐';
 
       html += `
-        <div class="timeline-event-${eventType}" style="border-left: 4px solid ${getEventTypeColor(eventType)}; padding-left: 15px; background: white; padding: 15px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+        <div class="timeline-event-${eventType}" style="border-left: 4px solid ${getEventTypeColor(eventType)}; padding-left: 15px; background: white; padding: 15px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); position: relative;">
+          <div class="edit-buttons">
+            <button class="edit-button" onclick="editEvent(${event.id})" title="Modifier l'événement">
+              ✏️
+            </button>
+          </div>
           <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px;">
             <h4 style="margin: 0 0 5px 0; color: #1e293b; font-size: 1.1em;">${event.text.headline}</h4>
             <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
@@ -438,6 +443,58 @@ function addTimelineStyling() {
           }
         });
 
+        // Add edit buttons to TimelineJS slides
+        slides.forEach((slide, index) => {
+          const eventData = window.timeline?.data?.events[index];
+          if (eventData && eventData.id && !slide.querySelector('.timeline-edit-button')) {
+            const editButton = document.createElement('button');
+            editButton.className = 'timeline-edit-button';
+            editButton.innerHTML = '✏️';
+            editButton.title = 'Modifier cet événement';
+            editButton.style.cssText = `
+              position: absolute;
+              top: 10px;
+              right: 10px;
+              background: rgba(255, 255, 255, 0.9);
+              border: 1px solid #e2e8f0;
+              border-radius: 50%;
+              width: 32px;
+              height: 32px;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              cursor: pointer;
+              font-size: 14px;
+              z-index: 10;
+              transition: all 0.2s ease;
+              opacity: 0.7;
+            `;
+            
+            editButton.addEventListener('mouseenter', () => {
+              editButton.style.background = 'white';
+              editButton.style.transform = 'scale(1.1)';
+              editButton.style.opacity = '1';
+              editButton.style.boxShadow = '0 2px 8px rgba(0,0,0,0.15)';
+            });
+            
+            editButton.addEventListener('mouseleave', () => {
+              editButton.style.background = 'rgba(255, 255, 255, 0.9)';
+              editButton.style.transform = 'scale(1)';
+              editButton.style.opacity = '0.7';
+              editButton.style.boxShadow = 'none';
+            });
+            
+            editButton.addEventListener('click', (e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              editEvent(eventData.id);
+            });
+            
+            slide.style.position = 'relative';
+            slide.appendChild(editButton);
+          }
+        });
+
         // Inject custom CSS directly into the page for maximum override power
         const customCSS = `
           <style id="timeline-color-override">
@@ -594,4 +651,171 @@ document.querySelectorAll('.form-input, .form-textarea').forEach(input => {
   input.addEventListener('input', () => {
     document.getElementById('message').innerHTML = '';
   });
+});
+
+// Edit functionality
+let currentEditingEvent = null;
+
+// Function to open edit modal
+function editEvent(eventId) {
+  currentEditingEvent = eventId;
+  
+  // Find the event data from the current timeline data
+  if (window.timeline?.data?.events) {
+    const event = window.timeline.data.events.find(e => e.id === eventId);
+    if (event && event.original_data) {
+      populateEditForm(event.original_data);
+      openEditModal();
+    } else {
+      // Fallback: fetch event data from server
+      fetchEventData(eventId);
+    }
+  } else {
+    // Fallback: fetch event data from server
+    fetchEventData(eventId);
+  }
+}
+
+// Function to fetch event data from server
+async function fetchEventData(eventId) {
+  try {
+    const response = await fetch(`/api/events/${eventId}`);
+    if (response.ok) {
+      const eventData = await response.json();
+      populateEditForm(eventData);
+      openEditModal();
+    } else {
+      alert('Erreur lors du chargement des données de l\'événement');
+    }
+  } catch (error) {
+    console.error('Error fetching event data:', error);
+    alert('Erreur lors du chargement des données de l\'événement');
+  }
+}
+
+// Function to populate edit form
+function populateEditForm(eventData) {
+  document.getElementById('edit_event_id').value = currentEditingEvent;
+  document.getElementById('edit_headline').value = eventData.headline || '';
+  document.getElementById('edit_text_content').value = eventData.text_content || '';
+  document.getElementById('edit_start_year').value = eventData.start_year || '';
+  document.getElementById('edit_start_month').value = eventData.start_month || '';
+  document.getElementById('edit_start_day').value = eventData.start_day || '';
+  document.getElementById('edit_media_url').value = eventData.media_url || '';
+  document.getElementById('edit_media_caption').value = eventData.media_caption || '';
+  document.getElementById('edit_group_name').value = eventData.group_name || '';
+  document.getElementById('edit_event_type').value = eventData.event_type || 'neutral';
+  document.getElementById('edit_emotion').value = eventData.emotion || 'neutral';
+}
+
+// Function to open edit modal
+function openEditModal() {
+  const modal = document.getElementById('editModal');
+  modal.classList.add('show');
+  document.body.style.overflow = 'hidden';
+}
+
+// Function to close edit modal
+function closeEditModal() {
+  const modal = document.getElementById('editModal');
+  modal.classList.remove('show');
+  document.body.style.overflow = '';
+  currentEditingEvent = null;
+}
+
+// Function to delete event
+async function deleteEvent() {
+  if (!currentEditingEvent) return;
+  
+  if (!confirm('Êtes-vous sûr de vouloir supprimer cet événement ? Cette action est irréversible.')) {
+    return;
+  }
+  
+  try {
+    const response = await fetch(`/api/events/${currentEditingEvent}`, {
+      method: 'DELETE'
+    });
+    
+    const result = await response.json();
+    
+    if (response.ok) {
+      alert('✅ ' + result.message);
+      closeEditModal();
+      // Reload timeline to reflect changes
+      setTimeout(() => loadTimeline(), 500);
+    } else {
+      alert('❌ ' + result.error);
+    }
+  } catch (error) {
+    console.error('Error deleting event:', error);
+    alert('❌ Erreur lors de la suppression de l\'événement');
+  }
+}
+
+// Handle edit form submission
+document.getElementById('editEventForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  
+  if (!currentEditingEvent) return;
+  
+  // Add loading state
+  const submitButton = e.target.querySelector('.modal-button-primary');
+  const originalText = submitButton.querySelector('.button-text').textContent;
+  submitButton.classList.add('loading');
+  submitButton.querySelector('.button-text').textContent = 'Sauvegarde...';
+  
+  const formData = {
+    headline: document.getElementById('edit_headline').value,
+    text_content: document.getElementById('edit_text_content').value,
+    start_year: parseInt(document.getElementById('edit_start_year').value),
+    start_month: document.getElementById('edit_start_month').value ? parseInt(document.getElementById('edit_start_month').value) : null,
+    start_day: document.getElementById('edit_start_day').value ? parseInt(document.getElementById('edit_start_day').value) : null,
+    media_url: document.getElementById('edit_media_url').value || null,
+    media_caption: document.getElementById('edit_media_caption').value || null,
+    group_name: document.getElementById('edit_group_name').value || null,
+    event_type: document.getElementById('edit_event_type').value || 'neutral',
+    emotion: document.getElementById('edit_emotion').value || 'neutral'
+  };
+  
+  try {
+    const response = await fetch(`/api/events/${currentEditingEvent}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(formData)
+    });
+    
+    const result = await response.json();
+    
+    if (response.ok) {
+      alert('✅ ' + result.message);
+      closeEditModal();
+      // Reload timeline to reflect changes
+      setTimeout(() => loadTimeline(), 500);
+    } else {
+      alert('❌ ' + result.error);
+    }
+  } catch (error) {
+    console.error('Error updating event:', error);
+    alert('❌ Erreur lors de la mise à jour de l\'événement');
+  } finally {
+    // Remove loading state
+    submitButton.classList.remove('loading');
+    submitButton.querySelector('.button-text').textContent = originalText;
+  }
+});
+
+// Close modal when clicking outside
+document.getElementById('editModal').addEventListener('click', (e) => {
+  if (e.target === document.getElementById('editModal')) {
+    closeEditModal();
+  }
+});
+
+// Close modal with Escape key
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && document.getElementById('editModal').classList.contains('show')) {
+    closeEditModal();
+  }
 });

@@ -98,6 +98,96 @@
     </aside>
   </main>
 
+  <!-- Edit Event Modal -->
+  <div id="editModal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2 class="modal-title">Modifier l'Événement</h2>
+        <button class="modal-close" onclick="closeEditModal()">&times;</button>
+      </div>
+      
+      <form id="editEventForm" class="event-form">
+        <input type="hidden" id="edit_event_id">
+        
+        <div class="form-group">
+          <label for="edit_headline" class="form-label">Titre de l'Événement *</label>
+          <input type="text" id="edit_headline" class="form-input" placeholder="Entrez le titre de l'événement" required>
+        </div>
+
+        <div class="form-group">
+          <label for="edit_text_content" class="form-label">Description *</label>
+          <textarea id="edit_text_content" class="form-textarea" placeholder="Décrivez l'événement" required></textarea>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label for="edit_start_year" class="form-label">Année *</label>
+            <input type="number" id="edit_start_year" class="form-input" placeholder="2024" required>
+          </div>
+          <div class="form-group">
+            <label for="edit_start_month" class="form-label">Mois</label>
+            <input type="number" id="edit_start_month" class="form-input" placeholder="1" min="1" max="12">
+          </div>
+          <div class="form-group">
+            <label for="edit_start_day" class="form-label">Jour</label>
+            <input type="number" id="edit_start_day" class="form-input" placeholder="1" min="1" max="31">
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="edit_media_url" class="form-label">URL du Média</label>
+          <input type="url" id="edit_media_url" class="form-input" placeholder="https://example.com/image.jpg">
+        </div>
+
+        <div class="form-group">
+          <label for="edit_media_caption" class="form-label">Légende du Média</label>
+          <input type="text" id="edit_media_caption" class="form-input" placeholder="Description du média">
+        </div>
+
+        <div class="form-group">
+          <label for="edit_group_name" class="form-label">Catégorie</label>
+          <input type="text" id="edit_group_name" class="form-input" placeholder="ex: Carrière, Personnel, Santé">
+        </div>
+
+        <div class="form-group">
+          <label for="edit_event_type" class="form-label">Type d'Événement *</label>
+          <select id="edit_event_type" class="form-input" required>
+            <option value="neutral">😐 Neutre</option>
+            <option value="good">😊 Positif</option>
+            <option value="bad">😢 Négatif</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label for="edit_emotion" class="form-label">Émotion *</label>
+          <select id="edit_emotion" class="form-input" required>
+            <option value="neutral">😐 Neutre</option>
+            <option value="joy">😄 Joie</option>
+            <option value="pride">🌟 Fierté</option>
+            <option value="gratitude">🙏 Gratitude</option>
+            <option value="anger">😠 Colère</option>
+            <option value="shame">😳 Honte</option>
+            <option value="self_deprecation">😔 Autodénigrement</option>
+            <option value="self_esteem">💪 Estime de soi</option>
+            <option value="sadness">😢 Tristesse</option>
+            <option value="anxiety">😰 Anxiété</option>
+          </select>
+        </div>
+
+        <div class="modal-buttons">
+          <button type="button" class="modal-button modal-button-danger" onclick="deleteEvent()">
+            <span class="button-text">Supprimer</span>
+            <span class="button-icon">🗑️</span>
+          </button>
+          <button type="submit" class="modal-button modal-button-primary">
+            <span class="button-text">Sauvegarder</span>
+            <span class="button-icon">💾</span>
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
   <script src="https://cdn.knightlab.com/libs/timeline3/latest/js/timeline.js"></script>
   <script src="timeline.js"></script>
 </body>

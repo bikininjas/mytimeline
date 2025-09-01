@@ -52,6 +52,7 @@ app.get('/api/data', async (req, res) => {
       const emotionText = row.emotion ? ` ${emotionEmoji} ${row.emotion.replace('_', ' ')}` : '';
 
       return {
+        id: row.id, // Include the ID for editing
         start_date: {
           year: row.start_year.toString(),
           month: row.start_month ? row.start_month.toString().padStart(2, '0') : undefined,
@@ -67,7 +68,20 @@ app.get('/api/data', async (req, res) => {
         } : undefined,
         group: row.event_type || 'neutral',
         event_type: row.event_type || 'neutral',
-        emotion: row.emotion || 'neutral'
+        emotion: row.emotion || 'neutral',
+        // Store original data for editing
+        original_data: {
+          headline: row.headline,
+          text_content: row.text_content,
+          start_year: row.start_year,
+          start_month: row.start_month,
+          start_day: row.start_day,
+          media_url: row.media_url,
+          media_caption: row.media_caption,
+          group_name: row.group_name,
+          event_type: row.event_type,
+          emotion: row.emotion
+        }
       };
     });
     const timelineData = {
@@ -106,6 +120,84 @@ app.post('/api/events', express.json(), async (req, res) => {
 
     await db.sql(sql);
     res.json({ success: true, message: 'Événement ajouté avec succès' });
+  } catch (err) {
+    console.error('Database error:', err);
+    res.status(500).json({ error: err.message });
+  } finally {
+    db?.close();
+  }
+});
+
+// API route to update an event
+app.put('/api/events/:id', express.json(), async (req, res) => {
+  const { id } = req.params;
+  const { headline, text_content, start_year, start_month, start_day, media_url, media_caption, group_name, event_type, emotion } = req.body;
+
+  if (!headline || !text_content || !start_year) {
+    return res.status(400).json({ error: 'Le titre, le contenu textuel et l\'année de début sont requis' });
+  }
+
+  let db = null;
+  try {
+    db = new Database(process.env.SQLITE_URL);
+
+    // Build SQL string with proper escaping
+    const sql = `UPDATE events SET 
+                   headline = '${headline.replace(/'/g, "''")}',
+                   text_content = '${text_content.replace(/'/g, "''")}',
+                   start_year = ${start_year},
+                   start_month = ${start_month || 'NULL'},
+                   start_day = ${start_day || 'NULL'},
+                   media_url = ${media_url ? `'${media_url.replace(/'/g, "''")}'` : 'NULL'},
+                   media_caption = ${media_caption ? `'${media_caption.replace(/'/g, "''")}'` : 'NULL'},
+                   group_name = ${group_name ? `'${group_name.replace(/'/g, "''")}'` : 'NULL'},
+                   event_type = '${(event_type || 'neutral').replace(/'/g, "''")}',
+                   emotion = '${(emotion || 'neutral').replace(/'/g, "''")}'
+                 WHERE id = ${parseInt(id)}`;
+
+    await db.sql(sql);
+    res.json({ success: true, message: 'Événement mis à jour avec succès' });
+  } catch (err) {
+    console.error('Database error:', err);
+    res.status(500).json({ error: err.message });
+  } finally {
+    db?.close();
+  }
+});
+
+// API route to delete an event
+app.delete('/api/events/:id', async (req, res) => {
+  const { id } = req.params;
+
+  let db = null;
+  try {
+    db = new Database(process.env.SQLITE_URL);
+
+    const sql = `DELETE FROM events WHERE id = ${parseInt(id)}`;
+    await db.sql(sql);
+    res.json({ success: true, message: 'Événement supprimé avec succès' });
+  } catch (err) {
+    console.error('Database error:', err);
+    res.status(500).json({ error: err.message });
+  } finally {
+    db?.close();
+  }
+});
+
+// API route to get a single event
+app.get('/api/events/:id', async (req, res) => {
+  const { id } = req.params;
+
+  let db = null;
+  try {
+    db = new Database(process.env.SQLITE_URL);
+    const result = await db.sql(`SELECT * FROM events WHERE id = ${parseInt(id)}`);
+    
+    if (result.length === 0) {
+      return res.status(404).json({ error: 'Événement non trouvé' });
+    }
+    
+    res.json(result[0]);
   } catch (err) {
     console.error('Database error:', err);
     res.status(500).json({ error: err.message });
