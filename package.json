@@ -4,7 +4,8 @@
   "description": "Interactive French-localized timeline application with color-coded events and real-time updates",
   "main": "server.js",
   "scripts": {
-    "start": "node server.js"
+    "start": "node server.js",
+    "dev": "bun --watch server.js"
   },
   "keywords": [
     "timeline",

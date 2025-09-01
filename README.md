@@ -280,16 +280,10 @@ The application features an advanced color coding system that provides visual di
 
 ```bash
 # Start development server
-bun start
+npm run dev
 
-# Install dependencies
-bun install
-
-# Add new dependency
-bun add package-name
-
-# Remove dependency
-bun remove package-name
+# Start production server
+npm start
 ```
 
 ### Code Style
@@ -301,21 +295,53 @@ bun remove package-name
 
 ## 🚀 Deployment
 
-### Environment Setup
+### Local Development
 
-1. Set up your production environment variables
-2. Ensure SQLiteCloud database is accessible
-3. Configure your web server (nginx, Apache, etc.)
-
-### Build for Production
+The application includes a comprehensive management script for easy server control:
 
 ```bash
-# Install production dependencies only
-bun install --production
+# Start server in background
+./manage.sh start
 
-# Start production server
-NODE_ENV=production bun start
+# Check server status
+./manage.sh status
+
+# View server logs
+./manage.sh logs
+
+# Stop server
+./manage.sh stop
+
+# Restart server
+./manage.sh restart
+
+# Clean up logs
+./manage.sh cleanup
 ```
+
+### Google Cloud Run
+
+Deploy to Google Cloud Run with automatic CI/CD via GitHub Actions.
+
+**Setup Requirements:**
+1. Your GCP project should already be configured
+2. Ensure Cloud Run and Artifact Registry APIs are enabled
+3. Create an Artifact Registry repository named `timeline-app` in `us-central1`
+4. Create a Secret Manager secret named `SQLITECLOUD_TIMELINE_CONNECTION_STRING` with your database URL
+5. The following organization secrets should already be configured:
+   - `GCP_PROJECT_ID` - Your GCP project ID
+   - `GCS_GH_SVC_ACCOUNT_JSON_KEY` - Service account key for GitHub Actions
+   - `SQLITECLOUD_TIMELINE_CONNECTION_STRING` - Your SQLiteCloud database connection string
+
+**Deployment:**
+- Push to `main` or `master` branch triggers automatic deployment
+- Uses minimal resources: 128Mi RAM, 0.08 CPU, max 1 instance
+- Deploys to `us-central1` region
+
+The GitHub Actions workflow will automatically:
+- Build Docker image using Bun Alpine
+- Push to Google Artifact Registry
+- Deploy to Cloud Run with minimal resource allocation
 
 ## 🤝 Contributing
 
