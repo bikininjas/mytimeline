@@ -40,8 +40,16 @@ jobs:
             --description="Timeline App Docker Repository - Europe West 9 (Paris)" \
             --quiet || echo "Repository already exists"
 
-      - name: Build and Push Docker Image
+      - name: Verify Repository and Build/Push Docker Image
         run: |
+          # Wait for repository to be ready
+          echo "Waiting for repository to be available..."
+          sleep 10
+          
+          # Verify repository exists
+          gcloud artifacts repositories describe timeline-app --location=europe-west9
+          
+          # Build and push image
           docker build -t europe-west9-docker.pkg.dev/$PROJECT_ID/timeline-app/timeline-app:${{ github.sha }} .
           docker push europe-west9-docker.pkg.dev/$PROJECT_ID/timeline-app/timeline-app:${{ github.sha }}
           
