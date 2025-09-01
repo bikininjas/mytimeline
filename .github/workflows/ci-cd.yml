@@ -79,4 +79,4 @@ jobs:
             --memory 128Mi \
             --cpu 0.08 \
             --max-instances 1 \
-            --set-env-vars SQLITECLOUD_TIMELINE_CONNECTION_STRING="${{ secrets.SQLITECLOUD_TIMELINE_CONNECTION_STRING }}"
+            --set-env-vars SQLITE_URL="${{ secrets.SQLITECLOUD_TIMELINE_CONNECTION_STRING }}"
