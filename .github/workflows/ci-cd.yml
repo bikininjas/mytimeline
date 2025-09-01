@@ -32,43 +32,42 @@ jobs:
       - name: Configure Docker for Artifact Registry
         run: gcloud auth configure-docker europe-west9-docker.pkg.dev
 
-      - name: Create Artifact Registry Repository
+      - name: Check/Create Artifact Registry Repository
         run: |
           echo "Checking if repository exists..."
           if gcloud artifacts repositories describe timeline-app --location=europe-west9 --quiet 2>/dev/null; then
-            echo "Repository already exists"
+            echo "✅ Repository already exists"
           else
-            echo "Creating repository..."
-            gcloud artifacts repositories create timeline-app \
-              --repository-format=docker \
-              --location=europe-west9 \
-              --description="Timeline App Docker Repository - Europe West 9 (Paris)"
+            echo "❌ Repository does not exist"
+            echo "⚠️  The 'timeline-app' repository needs to be created in europe-west9 region"
+            echo "🔧 Please ask your GCP admin to run:"
+            echo "   gcloud artifacts repositories create timeline-app \\"
+            echo "     --repository-format=docker \\"
+            echo "     --location=europe-west9 \\"
+            echo "     --description='Timeline App Docker Repository - Europe West 9 (Paris)'"
+            echo ""
+            echo "🔑 Or grant the service account the following permission:"
+            echo "   artifactregistry.repositories.create"
+            echo ""
+            echo "📋 For now, the deployment will continue to test other steps..."
           fi
 
-      - name: Verify Repository and Build/Push Docker Image
+      - name: Build and Push Docker Image
         run: |
-          # Wait for repository to be ready
-          echo "Waiting for repository to be available..."
-          sleep 5
-          
-          # List all repositories to debug
-          echo "Available repositories in europe-west9:"
-          gcloud artifacts repositories list --location=europe-west9
-          
-          # Try to describe the repository
-          echo "Attempting to describe timeline-app repository:"
-          gcloud artifacts repositories describe timeline-app --location=europe-west9 || {
-            echo "Repository not found, listing all repositories:"
-            gcloud artifacts repositories list --location=europe-west9
-            exit 1
-          }
-          
-          # Build and push image
-          echo "Building Docker image..."
+          # Build image
+          echo "🔨 Building Docker image..."
           docker build -t europe-west9-docker.pkg.dev/$PROJECT_ID/timeline-app/timeline-app:${{ github.sha }} .
           
-          echo "Pushing Docker image..."
-          docker push europe-west9-docker.pkg.dev/$PROJECT_ID/timeline-app/timeline-app:${{ github.sha }}
+          # Try to push image
+          echo "📤 Attempting to push Docker image..."
+          if docker push europe-west9-docker.pkg.dev/$PROJECT_ID/timeline-app/timeline-app:${{ github.sha }}; then
+            echo "✅ Docker image pushed successfully"
+          else
+            echo "❌ Failed to push Docker image"
+            echo "💡 This is likely because the Artifact Registry repository doesn't exist"
+            echo "🔧 Please create the repository first (see previous step for instructions)"
+            exit 1
+          fi
           
       - name: Deploy to Cloud Run
         run: |
