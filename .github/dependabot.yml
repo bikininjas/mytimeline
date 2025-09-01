@@ -1,0 +1,78 @@
+version: 2
+updates:
+  # Enable version updates for npm (Bun uses npm registry)
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "06:00"
+    open-pull-requests-limit: 10
+    reviewers:
+      - "bikininjas"
+    assignees:
+      - "bikininjas"
+    commit-message:
+      prefix: "deps"
+      include: "scope"
+    labels:
+      - "dependencies"
+      - "security"
+    # Group minor and patch updates
+    groups:
+      development-dependencies:
+        patterns:
+          - "*"
+        exclude-patterns:
+          - "@sqlitecloud/drivers"
+          - "express"
+          - "dotenv"
+        update-types:
+          - "minor"
+          - "patch"
+      production-dependencies:
+        patterns:
+          - "@sqlitecloud/drivers"
+          - "express" 
+          - "dotenv"
+          - "sqlite3"
+        update-types:
+          - "patch"
+    # Auto-merge patch updates for development dependencies
+    allow:
+      - dependency-type: "development"
+        update-type: "version-update:semver-patch"
+      - dependency-type: "production"
+        update-type: "security-update"
+
+  # Enable version updates for Docker
+  - package-ecosystem: "docker"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "tuesday"
+      time: "06:00"
+    open-pull-requests-limit: 5
+    reviewers:
+      - "bikininjas"
+    commit-message:
+      prefix: "docker"
+    labels:
+      - "docker"
+      - "dependencies"
+
+  # Enable version updates for GitHub Actions
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "wednesday" 
+      time: "06:00"
+    open-pull-requests-limit: 5
+    reviewers:
+      - "bikininjas"
+    commit-message:
+      prefix: "ci"
+    labels:
+      - "github-actions"
+      - "ci-cd"
