@@ -1,0 +1,157 @@
+name: Setup Custom Domain
+
+on:
+  workflow_dispatch:
+    inputs:
+      force_recreate:
+        description: 'Force recreate domain mapping if it exists'
+        required: false
+        default: false
+        type: boolean
+      verify_dns_only:
+        description: 'Only verify DNS configuration (do not create mapping)'
+        required: false
+        default: false
+        type: boolean
+
+env:
+  PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
+  REGION: europe-west9
+  SERVICE_NAME: timeline-app
+  DOMAIN_NAME: timeline.bikininjas.fr
+
+jobs:
+  verify-dns:
+    name: 🔍 Verify DNS Configuration
+    runs-on: ubuntu-latest
+    outputs:
+      dns_ready: ${{ steps.dns-check.outputs.dns_ready }}
+    
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+        
+      - name: 🔍 Check DNS configuration
+        id: dns-check
+        run: |
+          chmod +x ./gcp-config/domain-manager.sh
+          
+          if ./gcp-config/domain-manager.sh verify-dns -d "$DOMAIN_NAME" -p "$PROJECT_ID"; then
+            echo "dns_ready=true" >> $GITHUB_OUTPUT
+          else
+            echo "dns_ready=false" >> $GITHUB_OUTPUT
+          fi
+          
+      - name: 🔧 DNS Configuration Instructions
+        if: steps.dns-check.outputs.dns_ready == 'false'
+        run: |
+          echo "## 🌐 DNS Configuration Required" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Your domain **$DOMAIN_NAME** is not yet configured." >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Pulseheberg DNS Settings:" >> $GITHUB_STEP_SUMMARY
+          echo "| Field | Value |" >> $GITHUB_STEP_SUMMARY
+          echo "|-------|-------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Type | CNAME |" >> $GITHUB_STEP_SUMMARY
+          echo "| Host/Name | timeline |" >> $GITHUB_STEP_SUMMARY
+          echo "| Target/Points to | ghs.googlehosted.com. |" >> $GITHUB_STEP_SUMMARY
+          echo "| TTL | 300 |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### ⏰ Wait Time:" >> $GITHUB_STEP_SUMMARY
+          echo "- DNS propagation: 5-15 minutes" >> $GITHUB_STEP_SUMMARY
+          echo "- Re-run this workflow after DNS is configured" >> $GITHUB_STEP_SUMMARY
+
+  setup-domain:
+    name: 🌐 Setup Custom Domain
+    runs-on: ubuntu-latest
+    needs: verify-dns
+    if: ${{ needs.verify-dns.outputs.dns_ready == 'true' && inputs.verify_dns_only == false }}
+    
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+        
+      - name: 🔐 Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCS_GH_SVC_ACCOUNT_JSON_KEY }}
+          
+      - name: 🏗️ Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+        with:
+          project_id: ${{ secrets.GCP_PROJECT_ID }}
+          
+      - name: 🌐 Setup domain mapping
+        run: |
+          chmod +x ./gcp-config/domain-manager.sh
+          
+          FORCE_FLAG=""
+          if [ "${{ inputs.force_recreate }}" = "true" ]; then
+            FORCE_FLAG="--force"
+          fi
+          
+          ./gcp-config/domain-manager.sh setup-complete \
+            -d "$DOMAIN_NAME" \
+            -p "$PROJECT_ID" \
+            -r "$REGION" \
+            -s "$SERVICE_NAME" \
+            $FORCE_FLAG
+            
+      - name: 📋 Domain setup summary
+        run: |
+          chmod +x ./gcp-config/domain-manager.sh
+          
+          echo "## 🎉 Domain Setup Complete" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Your Timeline App domain has been configured!" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 🌐 Domain Information:" >> $GITHUB_STEP_SUMMARY
+          echo "- **Domain**: $DOMAIN_NAME" >> $GITHUB_STEP_SUMMARY
+          echo "- **Service**: $SERVICE_NAME" >> $GITHUB_STEP_SUMMARY
+          echo "- **Region**: $REGION" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 🔗 Access URLs:" >> $GITHUB_STEP_SUMMARY
+          echo "- **Production**: https://$DOMAIN_NAME" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 📊 Status Check:" >> $GITHUB_STEP_SUMMARY
+          echo '```bash' >> $GITHUB_STEP_SUMMARY
+          ./gcp-config/domain-manager.sh check-status -d "$DOMAIN_NAME" -p "$PROJECT_ID" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "⏳ **Note**: SSL certificate provisioning can take 15 minutes to 24 hours." >> $GITHUB_STEP_SUMMARY  dns-only-check:
+    name: 🔍 DNS Verification Only
+    runs-on: ubuntu-latest
+    if: ${{ inputs.verify_dns_only == true }}
+    
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+        
+      - name: 🔍 Verify DNS configuration
+        run: |
+          echo "## 🔍 DNS Verification for $DOMAIN_NAME" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          # Check DNS resolution
+          if nslookup $DOMAIN_NAME | grep -q "ghs.googlehosted.com"; then
+            echo "✅ DNS is properly configured!" >> $GITHUB_STEP_SUMMARY
+            echo "Your domain points to: ghs.googlehosted.com" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "❌ DNS not configured correctly" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "### Required Pulseheberg DNS Configuration:" >> $GITHUB_STEP_SUMMARY
+            echo "| Field | Value |" >> $GITHUB_STEP_SUMMARY
+            echo "|-------|-------|" >> $GITHUB_STEP_SUMMARY
+            echo "| Type | CNAME |" >> $GITHUB_STEP_SUMMARY
+            echo "| Host | timeline |" >> $GITHUB_STEP_SUMMARY
+            echo "| Target | ghs.googlehosted.com. |" >> $GITHUB_STEP_SUMMARY
+            echo "| TTL | 300 |" >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          # Additional DNS checks
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 🔧 DNS Check Commands:" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`bash" >> $GITHUB_STEP_SUMMARY
+          echo "nslookup $DOMAIN_NAME" >> $GITHUB_STEP_SUMMARY
+          echo "dig $DOMAIN_NAME CNAME" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
