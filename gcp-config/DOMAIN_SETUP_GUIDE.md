@@ -120,11 +120,12 @@ gcloud run domain-mappings describe $DOMAIN \
 
 ### Check Domain Mapping Status
 ```bash
+```bash
 # List all domain mappings
-gcloud run domain-mappings list --region=europe-west9
+gcloud run domain-mappings list
 
-# Check specific domain status
-gcloud run domain-mappings describe timeline.yourdomain.com --region=europe-west9
+# Get detailed status
+gcloud run domain-mappings describe timeline.yourdomain.com
 ```
 
 ### Test DNS Resolution
@@ -207,7 +208,7 @@ gcloud run domain-mappings create --service timeline-app-dev --domain dev.timeli
 
 ```bash
 # Check domain mapping status
-gcloud run domain-mappings describe YOUR_DOMAIN --region=europe-west9
+gcloud run domain-mappings describe YOUR_DOMAIN
 
 # Check Cloud Run service status
 gcloud run services describe timeline-app --region=europe-west9

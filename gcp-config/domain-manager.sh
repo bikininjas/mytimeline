@@ -160,10 +160,10 @@ create_mapping() {
     log_info "Creating domain mapping for $DOMAIN..."
     
     # Check if mapping already exists
-    if gcloud run domain-mappings describe "$DOMAIN" --region="$REGION" --project="$PROJECT_ID" --quiet 2>/dev/null; then
+    if gcloud run domain-mappings describe "$DOMAIN" --project="$PROJECT_ID" --quiet 2>/dev/null; then
         if [ "$FORCE_RECREATE" = true ]; then
             log_warning "Domain mapping exists, deleting and recreating..."
-            gcloud run domain-mappings delete "$DOMAIN" --region="$REGION" --project="$PROJECT_ID" --quiet
+            gcloud run domain-mappings delete "$DOMAIN" --project="$PROJECT_ID" --quiet
         else
             log_warning "Domain mapping already exists for $DOMAIN"
             log_info "Use --force to recreate"
@@ -175,7 +175,6 @@ create_mapping() {
     if gcloud run domain-mappings create \
         --service "$SERVICE" \
         --domain "$DOMAIN" \
-        --region "$REGION" \
         --project "$PROJECT_ID"; then
         log_success "Domain mapping created successfully"
         return 0
@@ -189,9 +188,8 @@ create_mapping() {
 check_status() {
     log_info "Checking domain mapping status for $DOMAIN..."
     
-    if gcloud run domain-mappings describe "$DOMAIN" --region="$REGION" --project="$PROJECT_ID" --quiet 2>/dev/null; then
+    if gcloud run domain-mappings describe "$DOMAIN" --project="$PROJECT_ID" --quiet 2>/dev/null; then
         gcloud run domain-mappings describe "$DOMAIN" \
-            --region="$REGION" \
             --project="$PROJECT_ID" \
             --format="table(
                 metadata.name:label='DOMAIN',
@@ -202,7 +200,6 @@ check_status() {
         
         # Get certificate status
         CERT_STATUS=$(gcloud run domain-mappings describe "$DOMAIN" \
-            --region="$REGION" \
             --project="$PROJECT_ID" \
             --format="value(status.conditions[0].status)")
         
@@ -223,8 +220,8 @@ check_status() {
 delete_mapping() {
     log_info "Deleting domain mapping for $DOMAIN..."
     
-    if gcloud run domain-mappings describe "$DOMAIN" --region="$REGION" --project="$PROJECT_ID" --quiet 2>/dev/null; then
-        gcloud run domain-mappings delete "$DOMAIN" --region="$REGION" --project="$PROJECT_ID" --quiet
+    if gcloud run domain-mappings describe "$DOMAIN" --project="$PROJECT_ID" --quiet 2>/dev/null; then
+        gcloud run domain-mappings delete "$DOMAIN" --project="$PROJECT_ID" --quiet
         log_success "Domain mapping deleted"
     else
         log_warning "No domain mapping found for $DOMAIN"
