@@ -52,29 +52,30 @@ jobs:
           
       - name: 📦 Create release archive
         run: |
-          tar -czf timeline-app-${{ github.ref_name }}.tar.gz -C release .
-          zip -r timeline-app-${{ github.ref_name }}.zip release/
+          tar -czf timeline-app-${{ inputs.version || github.ref_name }}.tar.gz -C release .
+          zip -r timeline-app-${{ inputs.version || github.ref_name }}.zip release/
           
       - name: 📝 Generate changelog
         id: changelog
         run: |
+          VERSION="${{ inputs.version || github.ref_name }}"
           echo "CHANGELOG<<EOF" >> $GITHUB_OUTPUT
           echo "## What's Changed" >> $GITHUB_OUTPUT
           echo "" >> $GITHUB_OUTPUT
-          git log --pretty=format:"- %s (%h)" $(git describe --tags --abbrev=0 HEAD^)..HEAD >> $GITHUB_OUTPUT || echo "- Initial release" >> $GITHUB_OUTPUT
+          git log --pretty=format:"- %s (%h)" $(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo "HEAD~10")..HEAD >> $GITHUB_OUTPUT || echo "- Initial release" >> $GITHUB_OUTPUT
           echo "" >> $GITHUB_OUTPUT
           echo "EOF" >> $GITHUB_OUTPUT
           
       - name: 🎯 Create Release
         id: create_release
-        uses: actions/create-release@v1
+        uses: softprops/action-gh-release@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          tag_name: ${{ github.ref_name }}
-          release_name: Timeline App ${{ github.ref_name }}
+          tag_name: ${{ inputs.version || github.ref_name }}
+          name: Timeline App ${{ inputs.version || github.ref_name }}
           body: |
-            # Timeline App ${{ github.ref_name }} 🎉
+            # Timeline App ${{ inputs.version || github.ref_name }} 🎉
             
             ${{ steps.changelog.outputs.CHANGELOG }}
             
@@ -82,7 +83,7 @@ jobs:
             
             ### Docker (Recommended)
             ```bash
-            docker pull ghcr.io/${{ github.repository }}:${{ github.ref_name }}
+            docker pull ghcr.io/${{ github.repository }}:${{ inputs.version || github.ref_name }}
             ```
             
             ### Manual Installation
@@ -104,26 +105,12 @@ jobs:
             See [README.md](https://github.com/${{ github.repository }}/blob/master/README.md) for complete documentation.
           draft: false
           prerelease: false
+          files: |
+            timeline-app-${{ inputs.version || github.ref_name }}.tar.gz
+            timeline-app-${{ inputs.version || github.ref_name }}.zip
           
-      - name: 📤 Upload TAR.GZ
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./timeline-app-${{ github.ref_name }}.tar.gz
-          asset_name: timeline-app-${{ github.ref_name }}.tar.gz
-          asset_content_type: application/gzip
-          
-      - name: 📤 Upload ZIP
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./timeline-app-${{ github.ref_name }}.zip
-          asset_name: timeline-app-${{ github.ref_name }}.zip
-          asset_content_type: application/zip
+      - name: 📤 Upload artifacts complete
+        run: echo "Release artifacts uploaded successfully"
 
   # Build and push Docker image for release
   docker-release:
@@ -148,20 +135,12 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
           
-      - name: 🔐 Login to Docker Hub
-        if: secrets.DOCKERHUB_USERNAME && secrets.DOCKERHUB_TOKEN
-        uses: docker/login-action@v3
-        with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
-          
-      - name: 📝 Extract metadata
+      - name:  Extract metadata
         id: meta
         uses: docker/metadata-action@v5
         with:
           images: |
             ghcr.io/${{ github.repository }}
-            ${{ secrets.DOCKERHUB_USERNAME }}/timeline-app
           tags: |
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
@@ -189,6 +168,6 @@ jobs:
     steps:
       - name: 📢 Notification
         run: |
-          echo "Timeline App ${{ github.ref_name }} has been released! 🎉"
-          echo "Release URL: ${{ needs.release.outputs.html_url }}"
+          echo "Timeline App ${{ inputs.version || github.ref_name }} has been released! 🎉"
+          echo "Release created successfully"
           # Add your notification logic here (Slack, Discord, email, etc.)

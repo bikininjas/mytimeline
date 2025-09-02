@@ -118,7 +118,9 @@ jobs:
           ./gcp-config/domain-manager.sh check-status -d "$DOMAIN_NAME" -p "$PROJECT_ID" >> $GITHUB_STEP_SUMMARY
           echo '```' >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "⏳ **Note**: SSL certificate provisioning can take 15 minutes to 24 hours." >> $GITHUB_STEP_SUMMARY  dns-only-check:
+          echo "⏳ **Note**: SSL certificate provisioning can take 15 minutes to 24 hours." >> $GITHUB_STEP_SUMMARY
+
+  dns-only-check:
     name: 🔍 DNS Verification Only
     runs-on: ubuntu-latest
     if: ${{ inputs.verify_dns_only == true }}
