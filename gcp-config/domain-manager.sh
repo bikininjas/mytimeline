@@ -159,16 +159,11 @@ check_service() {
 ensure_beta_components() {
     log_info "Ensuring gcloud beta components are available..."
     
-    # Check if beta components are already installed
-    if gcloud components list --filter="id:beta" --format="value(state.name)" 2>/dev/null | grep -q "Installed"; then
-        log_success "Beta components already installed"
-        return 0
-    fi
-    
-    # Install beta components quietly
-    log_info "Installing gcloud beta components..."
+    # Always try to install beta components quietly to ensure they're properly available
+    # This resolves issues where components show as "installed" but aren't fully active
+    log_info "Installing/updating gcloud beta components..."
     if gcloud components install beta --quiet; then
-        log_success "Beta components installed successfully"
+        log_success "Beta components are ready"
         return 0
     else
         log_error "Failed to install beta components"
