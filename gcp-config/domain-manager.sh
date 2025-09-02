@@ -40,6 +40,7 @@ usage() {
     echo ""
     echo "Commands:"
     echo "  verify-dns       Verify DNS configuration"
+    echo "  verify-domain    Verify domain ownership in Google Cloud"
     echo "  create-mapping   Create domain mapping"
     echo "  check-status     Check domain mapping status"
     echo "  setup-complete   Complete domain setup (verify + create)"
@@ -171,12 +172,49 @@ ensure_beta_components() {
     fi
 }
 
+# Verify domain ownership in Google Cloud
+verify_domain_ownership() {
+    log_info "Checking domain verification for $DOMAIN..."
+    
+    # Extract the root domain from subdomain
+    ROOT_DOMAIN=$(echo "$DOMAIN" | sed 's/^[^.]*\.//')
+    
+    # Check if domain is already verified
+    if gcloud domains list-user-verified --filter="domain:$ROOT_DOMAIN" --format="value(domain)" --quiet 2>/dev/null | grep -q "$ROOT_DOMAIN"; then
+        log_success "Domain $ROOT_DOMAIN is already verified"
+        return 0
+    fi
+    
+    log_warning "Domain $ROOT_DOMAIN needs to be verified"
+    log_info "To verify your domain:"
+    log_info "1. Go to: https://console.cloud.google.com/apis/credentials/domainverification"
+    log_info "2. Click 'Add Domain' and add: $ROOT_DOMAIN"
+    log_info "3. Follow Google's verification instructions"
+    log_info "4. Or add this TXT record to your DNS:"
+    
+    # Try to get verification token (this may fail if not initiated)
+    VERIFICATION_TOKEN=$(gcloud domains get-verification-token "$ROOT_DOMAIN" --format="value(token)" --quiet 2>/dev/null || echo "")
+    if [ -n "$VERIFICATION_TOKEN" ]; then
+        log_info "   TXT record: google-site-verification=$VERIFICATION_TOKEN"
+    else
+        log_info "   Visit the URL above to get the verification TXT record"
+    fi
+    
+    log_error "Domain verification required before creating domain mapping"
+    return 1
+}
+
 # Create domain mapping
 create_mapping() {
     log_info "Creating domain mapping for $DOMAIN..."
     
     # Ensure beta components are available
     if ! ensure_beta_components; then
+        return 1
+    fi
+    
+    # Verify domain ownership first
+    if ! verify_domain_ownership; then
         return 1
     fi
     
@@ -304,6 +342,9 @@ setup_complete() {
 case "$COMMAND" in
     verify-dns)
         verify_dns
+        ;;
+    verify-domain)
+        verify_domain_ownership
         ;;
     create-mapping)
         check_service || exit 1
